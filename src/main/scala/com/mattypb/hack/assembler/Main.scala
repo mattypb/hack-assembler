@@ -20,7 +20,7 @@ object Main extends IOApp {
     } yield ExitCode.Success
 
   def validateArgs(args: List[String]): IO[Unit] =
-    if (args.length != 1 || !args.head.endsWith(".asm"))
+    if (args.length != 1 || !args.head.endsWith(".asm") || args.head.length < 5)
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
@@ -30,10 +30,17 @@ object Main extends IOApp {
         .readAll[IO](Paths.get(s"$fileName.asm"), blocker, 4096)
         .through(text.utf8Decode)
         .through(text.lines)
-        .filter(s => !s.trim.isEmpty && !s.trim.startsWith("//"))
+        .map(removeCommentsAndWhitespace)
+        .filter(line => !line.isEmpty)
         .map(Parser.parse)
         .intersperse("\n")
         .through(text.utf8Encode)
         .through(io.file.writeAll(Files.createFile(Paths.get(s"$fileName.hack")), blocker))
+    }
+
+  def removeCommentsAndWhitespace(line: String): String =
+    line.indexOf("//") match {
+      case -1 => line.trim
+      case i => line.substring(0, i).trim
     }
 }
