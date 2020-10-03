@@ -28,15 +28,20 @@ case class AInstruction(line: String) extends Instruction {
 
 case class CInstruction(line: String) extends Instruction {
 
-  val dest: Option[String] = line.split("=").headOption
-  val jump: Option[String] = line.split(";").lastOption
+  val dest: Option[String] =
+    if (line.contains("=")) line.split("=").headOption
+    else None
+
+  val jump: Option[String] =
+    if (line.contains(";")) line.split(";").lastOption
+    else None
 
   val comp: String = dest match {
     case Some(_) => line.split("=").last
     case None    => line.split(";").head
   }
 
-  override def toBinary: Binary = ???
+  override def toBinary: Binary = Binary(s"111$compBinary$destBinary$jumpBinary")
 
   private def destBinary: String =
     dest match {
@@ -70,27 +75,33 @@ case class CInstruction(line: String) extends Instruction {
 
   private def compBinary: String =
     comp match {
-      case "0" => ""
-      case "1" => ""
-      case "-1" => ""
-      case "D" => ""
-      case "A" => ""
-      case "!D" => ""
-      case "!A" => ""
-      case "-D" => ""
-      case "-A" => ""
-      case "D+1" => ""
-      case "A+1" => ""
-      case "D-1" => ""
-      case "A-1" => ""
-      case "D+A" => ""
-      case "D-A" => ""
-      case "A-D" => ""
-      case "D&A" => ""
-      case "D|A" => ""
-      case "0" => ""
-      case "0" => ""
-      case "0" => ""
-      case "0" => ""
+      case "0"   => "0101010"
+      case "1"   => "0111111"
+      case "-1"  => "0111010"
+      case "D"   => "0001100"
+      case "A"   => "0110000"
+      case "!D"  => "0001101"
+      case "!A"  => "0110001"
+      case "-D"  => "0001111"
+      case "-A"  => "0110011"
+      case "D+1" => "0011111"
+      case "A+1" => "0110111"
+      case "D-1" => "0001110"
+      case "A-1" => "0110010"
+      case "D+A" => "0000010"
+      case "D-A" => "0010011"
+      case "A-D" => "0000111"
+      case "D&A" => "0000000"
+      case "D|A" => "0010101"
+      case "M"   => "1110000"
+      case "!M"  => "1110001"
+      case "-M"  => "1110011"
+      case "M+1" => "1110111"
+      case "M-1" => "1110010"
+      case "D+M" => "1000010"
+      case "D-M" => "1010011"
+      case "M-D" => "1000111"
+      case "D&M" => "1000000"
+      case "D|M" => "1010101"
     }
 }

@@ -16,10 +16,9 @@ class ParserTest extends AnyFunSuite with Matchers {
   }
 
   test("correctly converts C instructions to binary") {
-    AInstruction("D=A").toBinary shouldEqual Binary("1110110000010000")
-    AInstruction("M=M+1").toBinary shouldEqual Binary("1111110111001000")
-    AInstruction("D;JGT").toBinary shouldEqual Binary("1110001100000001")
+    CInstruction("D=A").toBinary shouldEqual Binary("1110110000010000")
+    CInstruction("M=M+1").toBinary shouldEqual Binary("1111110111001000")
+    CInstruction("D;JGT").toBinary shouldEqual Binary("1110001100000001")
   }
-
 
 }
