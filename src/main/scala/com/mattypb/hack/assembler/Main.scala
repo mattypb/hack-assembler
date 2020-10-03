@@ -15,8 +15,8 @@ object Main extends IOApp {
   override def run(args: List[String]): IO[ExitCode] =
     for {
       _ <- validateArgs(args)
-      fileName = args.head.substring(0, args.head.length - 4)
-      _ <- assembler(fileName).compile.drain
+      destinationFileName = args.head.replace(".asm", ".hack")
+      _ <- assembler(args.head, destinationFileName).compile.drain
     } yield ExitCode.Success
 
   def validateArgs(args: List[String]): IO[Unit] =
@@ -24,18 +24,18 @@ object Main extends IOApp {
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
-  def assembler(fileName: String): Stream[IO, Unit] =
+  def assembler(originFileName: String, destinationFileName: String): Stream[IO, Unit] =
     Stream.resource(Blocker[IO]).flatMap { blocker =>
       io.file
-        .readAll[IO](Paths.get(s"$fileName.asm"), blocker, 4096)
+        .readAll[IO](Paths.get(originFileName), blocker, 4096)
         .through(text.utf8Decode)
         .through(text.lines)
         .map(removeCommentsAndWhitespace)
         .filter(line => !line.isEmpty)
-        .map(Parser.parse)
+        .map(Parser.parseInstruction(_).toBinary.value)
         .intersperse("\n")
         .through(text.utf8Encode)
-        .through(io.file.writeAll(Files.createFile(Paths.get(s"$fileName.hack")), blocker))
+        .through(io.file.writeAll(Paths.get(destinationFileName), blocker))
     }
 
   def removeCommentsAndWhitespace(line: String): String =

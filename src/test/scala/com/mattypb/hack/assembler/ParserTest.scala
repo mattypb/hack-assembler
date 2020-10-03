@@ -6,8 +6,8 @@ import org.scalatest.matchers.should.Matchers
 class ParserTest extends AnyFunSuite with Matchers {
 
   test("correctly identifies A and C instructions") {
-    Parser.toInstruction("@2001") shouldBe AInstruction("@2001")
-    Parser.toInstruction("D=A") shouldBe CInstruction("D=A")
+    Parser.parseInstruction("@2001") shouldBe AInstruction("@2001")
+    Parser.parseInstruction("D=A") shouldBe CInstruction("D=A")
   }
 
   test("correctly converts A instructions to binary") {

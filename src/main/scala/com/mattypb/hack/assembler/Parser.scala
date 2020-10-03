@@ -2,9 +2,7 @@ package com.mattypb.hack.assembler
 
 object Parser {
 
-  def parse(line: String): String = toInstruction(line).toString
-
-  def toInstruction(line: String): Instruction =
+  def parseInstruction(line: String): Instruction =
     if (isAInstruction(line)) AInstruction(line)
     else CInstruction(line)
 
