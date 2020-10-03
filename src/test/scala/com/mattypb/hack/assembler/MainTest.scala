@@ -39,6 +39,24 @@ class MainTest extends AnyFunSuite with Matchers {
 //    compareHackFiles(file)
   }
 
+  test("correctly assembles MaxL.asm") {
+    val file = "MaxL"
+    assemble(file)
+//    compareHackFiles(file)
+  }
+
+  test("correctly assembles RectL.asm") {
+    val file = "RectL"
+    assemble(file)
+//    compareHackFiles(file)
+  }
+
+  test("correctly assembles PongL.asm") {
+    val file = "PongL"
+    assemble(file)
+//    compareHackFiles(file)
+  }
+
   private def assemble(file: String): Unit = {
     val origin = s"$resources/testdata/$file.asm"
     val destinationFileName = s"/generated/$file.hack"

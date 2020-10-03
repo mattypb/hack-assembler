@@ -1,6 +1,5 @@
 package com.mattypb.hack.assembler
 
-import java.nio.file.Files
 import java.nio.file.Paths
 
 import cats.effect.Blocker
@@ -41,6 +40,6 @@ object Main extends IOApp {
   def removeCommentsAndWhitespace(line: String): String =
     line.indexOf("//") match {
       case -1 => line.trim
-      case i => line.substring(0, i).trim
+      case i  => line.substring(0, i).trim
     }
 }
