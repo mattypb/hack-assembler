@@ -15,8 +15,9 @@ object Main extends IOApp {
     for {
       _ <- validateArgs(args)
       destinationFileName = args.head.replace(".asm", ".hack")
-      symbols <- firstPass(args.head)
-      _ <- secondPass(args.head, destinationFileName).compile.drain // TODO: pass in predefined and firstpass symbols
+      labels <- firstPass(args.head)
+      symbols = Symbols.predefined ++ labels
+      _ <- secondPass(args.head, destinationFileName, symbols)
     } yield ExitCode.Success
 
   def validateArgs(args: List[String]): IO[Unit] =
@@ -24,7 +25,6 @@ object Main extends IOApp {
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
-  // TODO: collect to Map
   def firstPass(originFileName: String): IO[Map[String, Long]] =
     Stream.resource(Blocker[IO]).flatMap { blocker =>
       io.file
@@ -35,10 +35,10 @@ object Main extends IOApp {
         .filter(line => !line.isEmpty)
         .zipWithIndex
         .filter{ case (line, _) => line.startsWith("(") }
+        .map{ case (line, index) => (removeBrackets(line), index)}
     }.compile.to(Map)
 
-  // TODO: this will need to take a map of symbols
-  def secondPass(originFileName: String, destinationFileName: String): Stream[IO, Unit] =
+  def secondPass(originFileName: String, destinationFileName: String, symbols: Map[String, Long]): IO[Unit] =
     Stream.resource(Blocker[IO]).flatMap { blocker =>
       io.file
         .readAll[IO](Paths.get(originFileName), blocker, 4096)
@@ -50,11 +50,13 @@ object Main extends IOApp {
         .intersperse("\n")
         .through(text.utf8Encode)
         .through(io.file.writeAll(Paths.get(destinationFileName), blocker))
-    }
+    }.compile.drain
 
   def removeCommentsAndWhitespace(line: String): String =
     line.indexOf("//") match {
       case -1 => line.trim
       case i  => line.substring(0, i).trim
     }
+
+  def removeBrackets(line: String): String = line.replaceAll("[()]","")
 }

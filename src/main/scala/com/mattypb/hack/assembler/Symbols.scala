@@ -1,6 +1,6 @@
 package com.mattypb.hack.assembler
 
-object Symbol {
+object Symbols {
 
   val predefined: Map[String, Long] = Map(
     "R0" -> 0,
@@ -28,7 +28,4 @@ object Symbol {
     "THAT" -> 4
   )
 
-  def parseLabels(pair: (String, Long)): Unit = pair match {
-    case (line, index) => ???
-  }
 }

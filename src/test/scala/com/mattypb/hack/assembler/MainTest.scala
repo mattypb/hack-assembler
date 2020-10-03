@@ -8,7 +8,9 @@ import scala.io.Source
 
 class MainTest extends AnyFunSuite with Matchers {
 
-  test("correctly validates command line arguments") {
+  private val resources: String = "src/test/resources"
+
+  test("validates command line arguments") {
     intercept[IllegalArgumentException](Main.validateArgs(List()).unsafeRunSync())
     intercept[IllegalArgumentException](Main.validateArgs(List("")).unsafeRunSync())
     intercept[IllegalArgumentException](Main.validateArgs(List("a1")).unsafeRunSync())
@@ -19,7 +21,7 @@ class MainTest extends AnyFunSuite with Matchers {
     Main.validateArgs(List("works.asm")).unsafeRunSync() shouldEqual ()
   }
 
-  test("correctly removes comments") {
+  test("removes comments") {
     Main.removeCommentsAndWhitespace("") shouldEqual ""
     Main.removeCommentsAndWhitespace(" ") shouldEqual ""
     Main.removeCommentsAndWhitespace(" a ") shouldEqual "a"
@@ -31,27 +33,42 @@ class MainTest extends AnyFunSuite with Matchers {
     Main.removeCommentsAndWhitespace("  @200 // asd  ") shouldEqual "@200"
   }
 
-  private val resources: String = "src/test/resources"
+  test("removes brackets from labels") {
+    Main.removeBrackets("()") shouldEqual ""
+    Main.removeBrackets("(LOOP)") shouldEqual "LOOP"
+  }
 
-  test("correctly assembles Add.asm") {
+  test("first pass generates correct map") {
+    val file = s"$resources/testdata/Max.asm"
+    val expected: Map[String, Long] = Map(
+      "OUTPUT_FIRST" -> 10,
+      "OUTPUT_D" -> 13,
+      "INFINITE_LOOP" -> 16
+    )
+    val actual: Map[String, Long] = Main.firstPass(file).unsafeRunSync()
+
+    actual shouldEqual expected
+  }
+
+  test("assembles Add.asm") {
     val file = "Add"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  test("correctly assembles MaxL.asm") {
+  test("assembles MaxL.asm") {
     val file = "MaxL"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  test("correctly assembles RectL.asm") {
+  test("assembles RectL.asm") {
     val file = "RectL"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  test("correctly assembles PongL.asm") {
+  test("assembles PongL.asm") {
     val file = "PongL"
     assemble(file)
 //    compareHackFiles(file)
@@ -62,7 +79,7 @@ class MainTest extends AnyFunSuite with Matchers {
     val destinationFileName = s"/generated/$file.hack"
     val destination = s"$resources$destinationFileName"
 
-    Main.secondPass(origin, destination).compile.drain.unsafeRunSync()
+    Main.secondPass(origin, destination, Map()).unsafeRunSync()
   }
 
   // can't run compareHackFiles() straight after assemble() because for some reason the file being written isn't being
