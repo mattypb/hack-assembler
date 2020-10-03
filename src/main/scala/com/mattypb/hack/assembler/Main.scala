@@ -15,7 +15,8 @@ object Main extends IOApp {
     for {
       _ <- validateArgs(args)
       destinationFileName = args.head.replace(".asm", ".hack")
-      _ <- assembler(args.head, destinationFileName).compile.drain
+      symbols <- firstPass(args.head)
+      _ <- secondPass(args.head, destinationFileName).compile.drain // TODO: pass in predefined and firstpass symbols
     } yield ExitCode.Success
 
   def validateArgs(args: List[String]): IO[Unit] =
@@ -23,7 +24,21 @@ object Main extends IOApp {
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
-  def assembler(originFileName: String, destinationFileName: String): Stream[IO, Unit] =
+  // TODO: collect to Map
+  def firstPass(originFileName: String): IO[Map[String, Long]] =
+    Stream.resource(Blocker[IO]).flatMap { blocker =>
+      io.file
+        .readAll[IO](Paths.get(originFileName), blocker, 4096)
+        .through(text.utf8Decode)
+        .through(text.lines)
+        .map(removeCommentsAndWhitespace)
+        .filter(line => !line.isEmpty)
+        .zipWithIndex
+        .filter{ case (line, _) => line.startsWith("(") }
+    }.compile.to(Map)
+
+  // TODO: this will need to take a map of symbols
+  def secondPass(originFileName: String, destinationFileName: String): Stream[IO, Unit] =
     Stream.resource(Blocker[IO]).flatMap { blocker =>
       io.file
         .readAll[IO](Paths.get(originFileName), blocker, 4096)
