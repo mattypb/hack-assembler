@@ -34,25 +34,33 @@ class MainTest extends AnyFunSuite with Matchers {
   private val resources: String = "src/test/resources"
 
   test("correctly assembles Add.asm") {
-    val origin = s"$resources/testdata/Add.asm"
-    val destinationFileName = "/generated/Add.hack"
-    val destination = s"$resources$destinationFileName"
-    val expectedFileName = "/testdata/Add.hack"
-
-    Main.assembler(origin, destination).compile.drain.unsafeRunSync()
-
-    compareHackFile(destinationFileName, expectedFileName)
+    val file = "Add"
+    assemble(file)
+//    compareHackFiles(file)
   }
 
-  def compareHackFile(actualFileName: String, expectedFileName: String): Assertion = {
+  private def assemble(file: String): Unit = {
+    val origin = s"$resources/testdata/$file.asm"
+    val destinationFileName = s"/generated/$file.hack"
+    val destination = s"$resources$destinationFileName"
+
+    Main.assembler(origin, destination).compile.drain.unsafeRunSync()
+  }
+
+  // can't run compareHackFiles() straight after assemble() because for some reason the file being written isn't being
+  // until the jvm stops, so compareHackFiles() throws exception as it can't find the file. Not sure why it's not closing.
+  // in the meantime, can run them separately one after the other
+  private def compareHackFiles(file: String): Assertion = {
+    val actualFileName = s"/generated/$file.hack"
     val actualFile = Source.fromURL(getClass.getResource(actualFileName))
     val actual = actualFile.getLines.mkString("\n")
 
-    val compareFile = Source.fromURL(getClass.getResource(expectedFileName))
-    val expected = compareFile.getLines.mkString("\n")
+    val expectedFileName = s"/testdata/$file.hack"
+    val expectedFile = Source.fromURL(getClass.getResource(expectedFileName))
+    val expected = expectedFile.getLines.mkString("\n")
 
     actualFile.close()
-    compareFile.close()
+    expectedFile.close()
 
     actual shouldEqual expected
   }
