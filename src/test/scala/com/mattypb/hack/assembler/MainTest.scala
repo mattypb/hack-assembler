@@ -1,5 +1,7 @@
 package com.mattypb.hack.assembler
 
+import cats.effect.IO
+import cats.effect.concurrent.Ref
 import org.scalatest.Assertion
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -50,36 +52,45 @@ class MainTest extends AnyFunSuite with Matchers {
     actual shouldEqual expected
   }
 
-  test("assembles Add.asm") {
+  test("second pass assembles Add.asm") {
     val file = "Add"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  test("assembles MaxL.asm") {
+  test("second pass assembles MaxL.asm") {
     val file = "MaxL"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  test("assembles RectL.asm") {
+  test("second pass assembles RectL.asm") {
     val file = "RectL"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  test("assembles PongL.asm") {
+  test("second pass assembles PongL.asm") {
     val file = "PongL"
     assemble(file)
 //    compareHackFiles(file)
   }
 
-  private def assemble(file: String): Unit = {
+
+
+  private def assemble(file: String, labels: Map[String, Long] = Map()): Unit = {
     val origin = s"$resources/testdata/$file.asm"
     val destinationFileName = s"/generated/$file.hack"
     val destination = s"$resources$destinationFileName"
 
-//    Main.secondPass(origin, destination, Map()).unsafeRunSync()
+    {
+      for {
+        symbols <- Ref[IO].of(Symbols.predefined ++ labels)
+        lastUsedAddress <- Ref[IO].of(15.toLong)
+        _ <- Main.secondPass(origin, destination, symbols, lastUsedAddress)
+      } yield ()
+    }.unsafeRunSync()
+
   }
 
   // can't run compareHackFiles() straight after assemble() because for some reason the file being written isn't being
