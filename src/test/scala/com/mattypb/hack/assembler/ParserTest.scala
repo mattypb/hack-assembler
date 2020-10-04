@@ -43,7 +43,7 @@ class ParserTest extends AnyFunSuite with Matchers {
         lastUsedAddress <- Ref[IO].of(address)
         binary <- AInstruction("@2001", symbols, lastUsedAddress).toBinary
       } yield {
-        binary.value shouldEqual "0000011111010001"   // 2001 in binary
+        binary.value shouldEqual "0000011111010001" // 2001 in binary
         symbols.get.unsafeRunSync().size shouldEqual 0
         lastUsedAddress.get.unsafeRunSync() shouldEqual address
       }
@@ -59,7 +59,7 @@ class ParserTest extends AnyFunSuite with Matchers {
         symbol = "var"
         binary <- AInstruction(s"@$symbol", symbols, lastUsedAddress).toBinary
       } yield {
-        binary.value shouldEqual "0000000000010000"   // 16 in binary
+        binary.value shouldEqual "0000000000010000" // 16 in binary
         symbols.get.unsafeRunSync().size shouldEqual 1
         symbols.get.unsafeRunSync()(symbol) shouldEqual address + 1
         lastUsedAddress.get.unsafeRunSync() shouldEqual address + 1
@@ -75,7 +75,7 @@ class ParserTest extends AnyFunSuite with Matchers {
         lastUsedAddress <- Ref[IO].of(address)
         binary <- AInstruction("@R3", symbols, lastUsedAddress).toBinary
       } yield {
-        binary.value shouldEqual "0000000000000011"   // 3 in binary
+        binary.value shouldEqual "0000000000000011" // 3 in binary
         symbols.get.unsafeRunSync().size shouldEqual 1
         lastUsedAddress.get.unsafeRunSync() shouldEqual address
       }

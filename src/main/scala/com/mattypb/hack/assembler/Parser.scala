@@ -10,14 +10,8 @@ object Parser {
     symbols: Ref[IO, Map[String, Long]],
     lastUsedAddress: Ref[IO, Long]
   ): Instruction =
-    if (isAInstruction(line)) {
-      println(s"A: $line")
-      AInstruction(line, symbols, lastUsedAddress)
-    }
-    else {
-      println(s"C: $line")
-      CInstruction(line)
-    }
+    if (isAInstruction(line)) AInstruction(line, symbols, lastUsedAddress)
+    else CInstruction(line)
 
   private def isAInstruction(line: String): Boolean = line.startsWith("@")
 }

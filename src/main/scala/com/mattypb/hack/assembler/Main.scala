@@ -27,7 +27,6 @@ object Main extends IOApp {
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
-  // TODO: labels line numbers are wrong
   def firstPass(originFileName: String): IO[Map[String, Long]] =
     Stream
       .resource(Blocker[IO])
@@ -40,7 +39,8 @@ object Main extends IOApp {
           .filter(line => !line.isEmpty)
           .zipWithIndex
           .filter { case (line, _) => line.startsWith("(") }
-          .map { case (line, index) => (removeBrackets(line), index) }
+          .zipWithIndex
+          .map { case ((line, index), labelCount) => (removeBrackets(line), index - labelCount) }
       }
       .compile
       .to(Map)

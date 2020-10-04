@@ -44,8 +44,8 @@ class MainTest extends AnyFunSuite with Matchers {
     val file = s"$resources/testdata/Max.asm"
     val expected: Map[String, Long] = Map(
       "OUTPUT_FIRST" -> 10,
-      "OUTPUT_D" -> 13,
-      "INFINITE_LOOP" -> 16
+      "OUTPUT_D" -> 12,
+      "INFINITE_LOOP" -> 14
     )
     val actual: Map[String, Long] = Main.firstPass(file).unsafeRunSync()
 
@@ -82,8 +82,22 @@ class MainTest extends AnyFunSuite with Matchers {
 //    compareHackFiles(file)
   }
 
+  test("assembles Rect.asm") {
+    val file = "Rect"
+    assemble(file, Main.firstPass)
+    //    compareHackFiles(file)
+  }
 
-  private def assemble(file: String, firstPass: String => IO[Map[String, Long]] = str => IO(Map[String, Long]())): Unit = {
+  test("assembles Pong.asm") {
+    val file = "Pong"
+    assemble(file, Main.firstPass)
+    //    compareHackFiles(file)
+  }
+
+  private def assemble(
+    file: String,
+    firstPass: String => IO[Map[String, Long]] = str => IO(Map[String, Long]())
+  ): Unit = {
     val origin = s"$resources/testdata/$file.asm"
     val destinationFileName = s"/generated/$file.hack"
     val destination = s"$resources$destinationFileName"
@@ -91,7 +105,6 @@ class MainTest extends AnyFunSuite with Matchers {
     {
       for {
         labels <- firstPass(origin)
-        _ <- IO(println(Symbols.predefined ++ labels))
         symbols <- Ref[IO].of(Symbols.predefined ++ labels)
         lastUsedAddress <- Ref[IO].of(15.toLong)
         _ <- Main.secondPass(origin, destination, symbols, lastUsedAddress)
