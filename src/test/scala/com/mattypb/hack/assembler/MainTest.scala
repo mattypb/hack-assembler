@@ -79,7 +79,7 @@ class MainTest extends AnyFunSuite with Matchers {
     val destinationFileName = s"/generated/$file.hack"
     val destination = s"$resources$destinationFileName"
 
-    Main.secondPass(origin, destination, Map()).unsafeRunSync()
+//    Main.secondPass(origin, destination, Map()).unsafeRunSync()
   }
 
   // can't run compareHackFiles() straight after assemble() because for some reason the file being written isn't being

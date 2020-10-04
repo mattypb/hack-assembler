@@ -6,6 +6,7 @@ import cats.effect.Blocker
 import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
+import cats.effect.concurrent.Ref
 import fs2.Stream
 import fs2.io
 import fs2.text
@@ -16,7 +17,7 @@ object Main extends IOApp {
       _ <- validateArgs(args)
       destinationFileName = args.head.replace(".asm", ".hack")
       labels <- firstPass(args.head)
-      symbols = Symbols.predefined ++ labels
+      symbols <- Ref[IO].of(Symbols.predefined ++ labels)
       _ <- secondPass(args.head, destinationFileName, symbols)
     } yield ExitCode.Success
 
@@ -26,31 +27,45 @@ object Main extends IOApp {
     else IO.unit
 
   def firstPass(originFileName: String): IO[Map[String, Long]] =
-    Stream.resource(Blocker[IO]).flatMap { blocker =>
-      io.file
-        .readAll[IO](Paths.get(originFileName), blocker, 4096)
-        .through(text.utf8Decode)
-        .through(text.lines)
-        .map(removeCommentsAndWhitespace)
-        .filter(line => !line.isEmpty)
-        .zipWithIndex
-        .filter{ case (line, _) => line.startsWith("(") }
-        .map{ case (line, index) => (removeBrackets(line), index)}
-    }.compile.to(Map)
+    Stream
+      .resource(Blocker[IO])
+      .flatMap { blocker =>
+        io.file
+          .readAll[IO](Paths.get(originFileName), blocker, 4096)
+          .through(text.utf8Decode)
+          .through(text.lines)
+          .map(removeCommentsAndWhitespace)
+          .filter(line => !line.isEmpty)
+          .zipWithIndex
+          .filter { case (line, _) => line.startsWith("(") }
+          .map { case (line, index) => (removeBrackets(line), index) }
+      }
+      .compile
+      .to(Map)
 
-  def secondPass(originFileName: String, destinationFileName: String, symbols: Map[String, Long]): IO[Unit] =
-    Stream.resource(Blocker[IO]).flatMap { blocker =>
-      io.file
-        .readAll[IO](Paths.get(originFileName), blocker, 4096)
-        .through(text.utf8Decode)
-        .through(text.lines)
-        .map(removeCommentsAndWhitespace)
-        .filter(line => !line.isEmpty)
-        .map(Parser.parseInstruction(_).toBinary.value)
-        .intersperse("\n")
-        .through(text.utf8Encode)
-        .through(io.file.writeAll(Paths.get(destinationFileName), blocker))
-    }.compile.drain
+  def secondPass(
+    originFileName: String,
+    destinationFileName: String,
+    symbols: Ref[IO, Map[String, Long]]
+  ): IO[Unit] =
+    Stream
+      .resource(Blocker[IO])
+      .flatMap { blocker =>
+        io.file
+          .readAll[IO](Paths.get(originFileName), blocker, 4096)
+          .through(text.utf8Decode)
+          .through(text.lines)
+          .map(removeCommentsAndWhitespace)
+          .filter(line => !line.isEmpty || line.startsWith("("))
+          .zipWithIndex
+          .map { case (line, index) => Parser.parseInstruction(line, index, symbols) }
+          .map(_.toBinary.map(_.value).unsafeRunSync()) // how do I not do this unsafeRunSync?
+          .intersperse("\n")
+          .through(text.utf8Encode)
+          .through(io.file.writeAll(Paths.get(destinationFileName), blocker))
+      }
+      .compile
+      .drain
 
   def removeCommentsAndWhitespace(line: String): String =
     line.indexOf("//") match {
@@ -58,5 +73,5 @@ object Main extends IOApp {
       case i  => line.substring(0, i).trim
     }
 
-  def removeBrackets(line: String): String = line.replaceAll("[()]","")
+  def removeBrackets(line: String): String = line.replaceAll("[()]", "")
 }

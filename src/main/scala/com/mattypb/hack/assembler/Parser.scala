@@ -1,9 +1,16 @@
 package com.mattypb.hack.assembler
 
+import cats.effect.IO
+import cats.effect.concurrent.Ref
+
 object Parser {
 
-  def parseInstruction(line: String): Instruction =
-    if (isAInstruction(line)) AInstruction(line)
+  def parseInstruction(
+    line: String,
+    index: Long,
+    symbols: Ref[IO, Map[String, Long]]
+  ): Instruction =
+    if (isAInstruction(line)) AInstruction(line, index, symbols)
     else CInstruction(line)
 
   private def isAInstruction(line: String): Boolean = line.startsWith("@")
@@ -12,16 +19,34 @@ object Parser {
 case class Binary(value: String)
 
 sealed trait Instruction {
-  def toBinary: Binary
+  def toBinary: IO[Binary]
 }
 
-case class AInstruction(line: String) extends Instruction {
-  val address: Int = line.substring(1).toInt
+case class AInstruction(line: String, index: Long, symbols: Ref[IO, Map[String, Long]])
+    extends Instruction {
+  def address: IO[Long] = {
+    val text = line.substring(1)
 
-  override def toBinary: Binary = {
-    val binaryString = s"000000000000000${address.toBinaryString}".takeRight(16)
-    Binary(binaryString)
+    text.toLongOption match {
+      case Some(value: Long) => IO(value)
+      case None              => handleSymbol(text)
+    }
   }
+
+  private def handleSymbol(text: String): IO[Long] =
+    symbols.get.map {
+      _.get(text) match {
+        case Some(v: Long) => v
+        case None          => index
+      }
+    }
+
+  override def toBinary: IO[Binary] =
+    address.map { a =>
+      val binaryString = s"000000000000000${a.toBinaryString}".takeRight(16)
+      Binary(binaryString)
+    }
+
 }
 
 case class CInstruction(line: String) extends Instruction {
@@ -39,7 +64,7 @@ case class CInstruction(line: String) extends Instruction {
     case None    => line.split(";").head
   }
 
-  override def toBinary: Binary = Binary(s"111$compBinary$destBinary$jumpBinary")
+  override def toBinary: IO[Binary] = IO(Binary(s"111$compBinary$destBinary$jumpBinary"))
 
   private def destBinary: String =
     dest match {
