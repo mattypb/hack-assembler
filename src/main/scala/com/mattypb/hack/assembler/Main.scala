@@ -18,7 +18,8 @@ object Main extends IOApp {
       destinationFileName = args.head.replace(".asm", ".hack")
       labels <- firstPass(args.head)
       symbols <- Ref[IO].of(Symbols.predefined ++ labels)
-      _ <- secondPass(args.head, destinationFileName, symbols)
+      lastUsedAddress <- Ref[IO].of(15.toLong)
+      _ <- secondPass(args.head, destinationFileName, symbols, lastUsedAddress)
     } yield ExitCode.Success
 
   def validateArgs(args: List[String]): IO[Unit] =
@@ -46,7 +47,8 @@ object Main extends IOApp {
   def secondPass(
     originFileName: String,
     destinationFileName: String,
-    symbols: Ref[IO, Map[String, Long]]
+    symbols: Ref[IO, Map[String, Long]],
+    lastUsedAddress: Ref[IO, Long]
   ): IO[Unit] =
     Stream
       .resource(Blocker[IO])
@@ -57,8 +59,7 @@ object Main extends IOApp {
           .through(text.lines)
           .map(removeCommentsAndWhitespace)
           .filter(line => !line.isEmpty || line.startsWith("("))
-          .zipWithIndex
-          .map { case (line, index) => Parser.parseInstruction(line, index, symbols) }
+          .map(line => Parser.parseInstruction(line, symbols, lastUsedAddress))
           .map(_.toBinary.map(_.value).unsafeRunSync()) // how do I not do this unsafeRunSync?
           .intersperse("\n")
           .through(text.utf8Encode)

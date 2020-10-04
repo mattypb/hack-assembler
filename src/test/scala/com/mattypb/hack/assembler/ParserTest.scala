@@ -8,33 +8,44 @@ import org.scalatest.matchers.should.Matchers
 class ParserTest extends AnyFunSuite with Matchers {
 
   test("identifies A instruction") {
-    Ref[IO]
-      .of(Map[String, Long]())
-      .map { ref =>
-        val index = 0
-        Parser.parseInstruction("@2001", index, ref) shouldBe AInstruction("@2001", index, ref)
+    {
+      for {
+        symbols <- Ref[IO].of(Map[String, Long]())
+        lastUsedAddress <- Ref[IO].of(15.toLong)
+        line = "@2001"
+      } yield {
+        Parser.parseInstruction(line, symbols, lastUsedAddress) shouldBe AInstruction(
+          line,
+          symbols,
+          lastUsedAddress
+        )
       }
-      .unsafeRunSync()
+    }.unsafeRunSync()
   }
 
   test("identifies C instructions") {
-    Ref[IO]
-      .of(Map[String, Long]())
-      .map { ref =>
-        Parser.parseInstruction("D=A", 0, ref) shouldBe CInstruction("D=A")
+    {
+      for {
+        symbols <- Ref[IO].of(Map[String, Long]())
+        lastUsedAddress <- Ref[IO].of(15.toLong)
+        line = "D=A"
+      } yield {
+        Parser.parseInstruction(line, symbols, lastUsedAddress) shouldBe CInstruction(line)
       }
-      .unsafeRunSync()
+    }.unsafeRunSync()
   }
 
   test("converts standard A instruction to binary") {
     {
       for {
-        ref <- Ref[IO].of(Map[String, Long]())
-        index = 0
-        binary <- AInstruction("@2001", index, ref).toBinary
+        symbols <- Ref[IO].of(Map[String, Long]())
+        address = 15.toLong
+        lastUsedAddress <- Ref[IO].of(address)
+        binary <- AInstruction("@2001", symbols, lastUsedAddress).toBinary
       } yield {
-        binary.value shouldEqual "0000011111010001"
-        ref.get.unsafeRunSync().size shouldEqual 0
+        binary.value shouldEqual "0000011111010001"   // 2001 in binary
+        symbols.get.unsafeRunSync().size shouldEqual 0
+        lastUsedAddress.get.unsafeRunSync() shouldEqual address
       }
     }.unsafeRunSync()
   }
@@ -42,17 +53,34 @@ class ParserTest extends AnyFunSuite with Matchers {
   test("converts A instruction to binary, with symbol not yet stored") {
     {
       for {
-        ref <- Ref[IO].of(Map[String, Long]())
-        index = 16
-        binary <- AInstruction("@var", index, ref).toBinary
+        symbols <- Ref[IO].of(Map[String, Long]())
+        address = 15.toLong
+        lastUsedAddress <- Ref[IO].of(address)
+        symbol = "var"
+        binary <- AInstruction(s"@$symbol", symbols, lastUsedAddress).toBinary
       } yield {
-        binary.value shouldEqual "0000011111010001"
-        ref.get.unsafeRunSync().size shouldEqual 1
+        binary.value shouldEqual "0000000000010000"   // 16 in binary
+        symbols.get.unsafeRunSync().size shouldEqual 1
+        symbols.get.unsafeRunSync()(symbol) shouldEqual address + 1
+        lastUsedAddress.get.unsafeRunSync() shouldEqual address + 1
       }
     }.unsafeRunSync()
   }
 
-  test("converts A instruction to binary, with symbol already stored") {}
+  test("converts A instruction to binary, with symbol already stored") {
+    {
+      for {
+        symbols <- Ref[IO].of(Map[String, Long]("R3" -> 3))
+        address = 15.toLong
+        lastUsedAddress <- Ref[IO].of(address)
+        binary <- AInstruction("@R3", symbols, lastUsedAddress).toBinary
+      } yield {
+        binary.value shouldEqual "0000000000000011"   // 3 in binary
+        symbols.get.unsafeRunSync().size shouldEqual 1
+        lastUsedAddress.get.unsafeRunSync() shouldEqual address
+      }
+    }.unsafeRunSync()
+  }
 
   test("converts C instructions to binary") {
     CInstruction("D=A").toBinary.unsafeRunSync() shouldEqual Binary("1110110000010000")

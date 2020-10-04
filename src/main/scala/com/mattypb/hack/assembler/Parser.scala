@@ -7,10 +7,10 @@ object Parser {
 
   def parseInstruction(
     line: String,
-    index: Long,
-    symbols: Ref[IO, Map[String, Long]]
+    symbols: Ref[IO, Map[String, Long]],
+    lastUsedAddress: Ref[IO, Long]
   ): Instruction =
-    if (isAInstruction(line)) AInstruction(line, index, symbols)
+    if (isAInstruction(line)) AInstruction(line, symbols, lastUsedAddress)
     else CInstruction(line)
 
   private def isAInstruction(line: String): Boolean = line.startsWith("@")
@@ -22,22 +22,29 @@ sealed trait Instruction {
   def toBinary: IO[Binary]
 }
 
-case class AInstruction(line: String, index: Long, symbols: Ref[IO, Map[String, Long]])
-    extends Instruction {
+case class AInstruction(
+  line: String,
+  symbols: Ref[IO, Map[String, Long]],
+  lastUsedAddress: Ref[IO, Long]
+) extends Instruction {
   def address: IO[Long] = {
     val text = line.substring(1)
 
     text.toLongOption match {
       case Some(value: Long) => IO(value)
-      case None              => handleSymbol(text)
+      case None              => getOrStoreSymbol(text)
     }
   }
 
-  private def handleSymbol(text: String): IO[Long] =
-    symbols.get.map {
+  private def getOrStoreSymbol(text: String): IO[Long] =
+    symbols.get.flatMap {
       _.get(text) match {
-        case Some(v: Long) => v
-        case None          => index
+        case Some(v: Long) => IO(v)
+        case None =>
+          for {
+            a <- lastUsedAddress.updateAndGet(_ + 1)
+            _ <- symbols.update(_ ++ Map(text -> a))
+          } yield a
       }
     }
 
