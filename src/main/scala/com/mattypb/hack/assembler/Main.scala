@@ -27,6 +27,7 @@ object Main extends IOApp {
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
+  // TODO: labels line numbers are wrong
   def firstPass(originFileName: String): IO[Map[String, Long]] =
     Stream
       .resource(Blocker[IO])
@@ -58,7 +59,8 @@ object Main extends IOApp {
           .through(text.utf8Decode)
           .through(text.lines)
           .map(removeCommentsAndWhitespace)
-          .filter(line => !line.isEmpty || line.startsWith("("))
+          .filter(line => !line.isEmpty)
+          .filter(line => !line.startsWith("("))
           .map(line => Parser.parseInstruction(line, symbols, lastUsedAddress))
           .map(_.toBinary.map(_.value).unsafeRunSync()) // how do I not do this unsafeRunSync?
           .intersperse("\n")

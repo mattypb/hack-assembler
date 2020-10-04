@@ -76,15 +76,22 @@ class MainTest extends AnyFunSuite with Matchers {
 //    compareHackFiles(file)
   }
 
+  test("assembles Max.asm") {
+    val file = "Max"
+    assemble(file, Main.firstPass)
+//    compareHackFiles(file)
+  }
 
 
-  private def assemble(file: String, labels: Map[String, Long] = Map()): Unit = {
+  private def assemble(file: String, firstPass: String => IO[Map[String, Long]] = str => IO(Map[String, Long]())): Unit = {
     val origin = s"$resources/testdata/$file.asm"
     val destinationFileName = s"/generated/$file.hack"
     val destination = s"$resources$destinationFileName"
 
     {
       for {
+        labels <- firstPass(origin)
+        _ <- IO(println(Symbols.predefined ++ labels))
         symbols <- Ref[IO].of(Symbols.predefined ++ labels)
         lastUsedAddress <- Ref[IO].of(15.toLong)
         _ <- Main.secondPass(origin, destination, symbols, lastUsedAddress)
