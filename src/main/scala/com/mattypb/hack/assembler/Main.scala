@@ -62,7 +62,7 @@ object Main extends IOApp {
           .filter(line => !line.isEmpty)
           .filter(line => !line.startsWith("("))
           .map(line => Parser.parseInstruction(line, symbols, lastUsedAddress))
-          .map(_.toBinary.map(_.value).unsafeRunSync()) // how do I not do this unsafeRunSync?
+          .evalMap(_.toBinary.map(_.value))
           .intersperse("\n")
           .through(text.utf8Encode)
           .through(io.file.writeAll(Paths.get(destinationFileName), blocker))
