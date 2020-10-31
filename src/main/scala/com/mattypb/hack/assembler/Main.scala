@@ -7,6 +7,8 @@ import cats.effect.ExitCode
 import cats.effect.IO
 import cats.effect.IOApp
 import cats.effect.concurrent.Ref
+import com.mattypb.hack.assembler.Parser.toInstruction
+import fs2.io.file.writeAll
 import fs2.Stream
 import fs2.io
 import fs2.text
@@ -61,11 +63,11 @@ object Main extends IOApp {
           .map(removeCommentsAndWhitespace)
           .filter(line => !line.isEmpty)
           .filter(line => !line.startsWith("("))
-          .map(line => Parser.parseInstruction(line, symbols, lastUsedAddress))
+          .map(line => toInstruction(line, symbols, lastUsedAddress))
           .evalMap(_.toBinary.map(_.value))
           .intersperse("\n")
           .through(text.utf8Encode)
-          .through(io.file.writeAll(Paths.get(destinationFileName), blocker))
+          .through(writeAll(Paths.get(destinationFileName), blocker))
       }
       .compile
       .drain

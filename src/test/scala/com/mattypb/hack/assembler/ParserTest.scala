@@ -2,6 +2,7 @@ package com.mattypb.hack.assembler
 
 import cats.effect.IO
 import cats.effect.concurrent.Ref
+import com.mattypb.hack.assembler.Parser.toInstruction
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
 
@@ -14,7 +15,7 @@ class ParserTest extends AnyFunSuite with Matchers {
         lastUsedAddress <- Ref[IO].of(15.toLong)
         line = "@2001"
       } yield {
-        Parser.parseInstruction(line, symbols, lastUsedAddress) shouldBe AInstruction(
+        toInstruction(line, symbols, lastUsedAddress) shouldBe AInstruction(
           line,
           symbols,
           lastUsedAddress
@@ -30,7 +31,7 @@ class ParserTest extends AnyFunSuite with Matchers {
         lastUsedAddress <- Ref[IO].of(15.toLong)
         line = "D=A"
       } yield {
-        Parser.parseInstruction(line, symbols, lastUsedAddress) shouldBe CInstruction(line)
+        toInstruction(line, symbols, lastUsedAddress) shouldBe CInstruction(line)
       }
     }.unsafeRunSync()
   }

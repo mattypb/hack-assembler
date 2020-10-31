@@ -5,7 +5,7 @@ import cats.effect.concurrent.Ref
 
 object Parser {
 
-  def parseInstruction(
+  def toInstruction(
     line: String,
     symbols: Ref[IO, Map[String, Long]],
     lastUsedAddress: Ref[IO, Long]

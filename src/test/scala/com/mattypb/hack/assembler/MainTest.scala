@@ -5,6 +5,7 @@ import java.nio.file.Paths
 
 import cats.effect.IO
 import cats.effect.concurrent.Ref
+import com.mattypb.hack.assembler.Main._
 import org.scalatest.Assertion
 import org.scalatest.funsuite.AnyFunSuite
 import org.scalatest.matchers.should.Matchers
@@ -17,31 +18,31 @@ class MainTest extends AnyFunSuite with Matchers {
   private val generated: String = s"$testData/generated"
 
   test("validates command line arguments") {
-    intercept[IllegalArgumentException](Main.validateArgs(List()).unsafeRunSync())
-    intercept[IllegalArgumentException](Main.validateArgs(List("")).unsafeRunSync())
-    intercept[IllegalArgumentException](Main.validateArgs(List("a1")).unsafeRunSync())
-    intercept[IllegalArgumentException](Main.validateArgs(List("b2.")).unsafeRunSync())
-    intercept[IllegalArgumentException](Main.validateArgs(List("3c.btn")).unsafeRunSync())
-    intercept[IllegalArgumentException](Main.validateArgs(List(".asm")).unsafeRunSync())
-    intercept[IllegalArgumentException](Main.validateArgs(List("a1.asm", "b2.asm")).unsafeRunSync())
-    Main.validateArgs(List("works.asm")).unsafeRunSync() shouldEqual ()
+    intercept[IllegalArgumentException](validateArgs(List()).unsafeRunSync())
+    intercept[IllegalArgumentException](validateArgs(List("")).unsafeRunSync())
+    intercept[IllegalArgumentException](validateArgs(List("a1")).unsafeRunSync())
+    intercept[IllegalArgumentException](validateArgs(List("b2.")).unsafeRunSync())
+    intercept[IllegalArgumentException](validateArgs(List("3c.btn")).unsafeRunSync())
+    intercept[IllegalArgumentException](validateArgs(List(".asm")).unsafeRunSync())
+    intercept[IllegalArgumentException](validateArgs(List("a1.asm", "b2.asm")).unsafeRunSync())
+    validateArgs(List("works.asm")).unsafeRunSync() shouldEqual ()
   }
 
   test("removes comments") {
-    Main.removeCommentsAndWhitespace("") shouldEqual ""
-    Main.removeCommentsAndWhitespace(" ") shouldEqual ""
-    Main.removeCommentsAndWhitespace(" a ") shouldEqual "a"
-    Main.removeCommentsAndWhitespace("string") shouldEqual "string"
-    Main.removeCommentsAndWhitespace("//") shouldEqual ""
-    Main.removeCommentsAndWhitespace("// asd") shouldEqual ""
-    Main.removeCommentsAndWhitespace("  //  ") shouldEqual ""
-    Main.removeCommentsAndWhitespace("  // asd  ") shouldEqual ""
-    Main.removeCommentsAndWhitespace("  @200 // asd  ") shouldEqual "@200"
+    removeCommentsAndWhitespace("") shouldEqual ""
+    removeCommentsAndWhitespace(" ") shouldEqual ""
+    removeCommentsAndWhitespace(" a ") shouldEqual "a"
+    removeCommentsAndWhitespace("string") shouldEqual "string"
+    removeCommentsAndWhitespace("//") shouldEqual ""
+    removeCommentsAndWhitespace("// asd") shouldEqual ""
+    removeCommentsAndWhitespace("  //  ") shouldEqual ""
+    removeCommentsAndWhitespace("  // asd  ") shouldEqual ""
+    removeCommentsAndWhitespace("  @200 // asd  ") shouldEqual "@200"
   }
 
   test("removes brackets from labels") {
-    Main.removeBrackets("()") shouldEqual ""
-    Main.removeBrackets("(LOOP)") shouldEqual "LOOP"
+    removeBrackets("()") shouldEqual ""
+    removeBrackets("(LOOP)") shouldEqual "LOOP"
   }
 
   test("first pass generates correct map") {
@@ -51,7 +52,7 @@ class MainTest extends AnyFunSuite with Matchers {
       "OUTPUT_D" -> 12,
       "INFINITE_LOOP" -> 14
     )
-    val actual: Map[String, Long] = Main.firstPass(file).unsafeRunSync()
+    val actual: Map[String, Long] = firstPass(file).unsafeRunSync()
 
     actual shouldEqual expected
   }
@@ -78,17 +79,17 @@ class MainTest extends AnyFunSuite with Matchers {
 
   test("assembles Max.asm") {
     val file = "Max"
-    assembleAndCompare(file, Main.firstPass)
+    assembleAndCompare(file, firstPass)
   }
 
   test("assembles Rect.asm") {
     val file = "Rect"
-    assembleAndCompare(file, Main.firstPass)
+    assembleAndCompare(file, firstPass)
   }
 
   test("assembles Pong.asm") {
     val file = "Pong"
-    assembleAndCompare(file, Main.firstPass)
+    assembleAndCompare(file, firstPass)
   }
 
   private def assembleAndCompare(
@@ -105,7 +106,7 @@ class MainTest extends AnyFunSuite with Matchers {
         labels <- firstPass(origin)
         symbols <- Ref[IO].of(Symbols.predefined ++ labels)
         lastUsedAddress <- Ref[IO].of(15.toLong)
-        _ <- Main.secondPass(origin, destination, symbols, lastUsedAddress)
+        _ <- secondPass(origin, destination, symbols, lastUsedAddress)
       } yield compareHackFiles(expectedFile, destination)
     }.unsafeRunSync()
   }
