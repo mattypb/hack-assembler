@@ -5,4 +5,4 @@ target/
 .metals/
 .bloop/
 metals.sbt
-src/test/resources/generated
+src/test/resources/testdata/generated

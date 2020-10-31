@@ -1,5 +1,8 @@
 package com.mattypb.hack.assembler
 
+import java.nio.file.Files
+import java.nio.file.Paths
+
 import cats.effect.IO
 import cats.effect.concurrent.Ref
 import org.scalatest.Assertion
@@ -10,7 +13,8 @@ import scala.io.Source
 
 class MainTest extends AnyFunSuite with Matchers {
 
-  private val resources: String = "src/test/resources"
+  private val testData: String = "src/test/resources/testdata"
+  private val generated: String = s"$testData/generated"
 
   test("validates command line arguments") {
     intercept[IllegalArgumentException](Main.validateArgs(List()).unsafeRunSync())
@@ -41,7 +45,7 @@ class MainTest extends AnyFunSuite with Matchers {
   }
 
   test("first pass generates correct map") {
-    val file = s"$resources/testdata/Max.asm"
+    val file = s"$testData/Max.asm"
     val expected: Map[String, Long] = Map(
       "OUTPUT_FIRST" -> 10,
       "OUTPUT_D" -> 12,
@@ -54,79 +58,67 @@ class MainTest extends AnyFunSuite with Matchers {
 
   test("second pass assembles Add.asm") {
     val file = "Add"
-    assemble(file)
-//    compareHackFiles(file)
+    assembleAndCompare(file)
   }
 
   test("second pass assembles MaxL.asm") {
     val file = "MaxL"
-    assemble(file)
-//    compareHackFiles(file)
+    assembleAndCompare(file)
   }
 
   test("second pass assembles RectL.asm") {
     val file = "RectL"
-    assemble(file)
-//    compareHackFiles(file)
+    assembleAndCompare(file)
   }
 
   test("second pass assembles PongL.asm") {
     val file = "PongL"
-    assemble(file)
-//    compareHackFiles(file)
+    assembleAndCompare(file)
   }
 
   test("assembles Max.asm") {
     val file = "Max"
-    assemble(file, Main.firstPass)
-//    compareHackFiles(file)
+    assembleAndCompare(file, Main.firstPass)
   }
 
   test("assembles Rect.asm") {
     val file = "Rect"
-    assemble(file, Main.firstPass)
-    //    compareHackFiles(file)
+    assembleAndCompare(file, Main.firstPass)
   }
 
   test("assembles Pong.asm") {
     val file = "Pong"
-    assemble(file, Main.firstPass)
-    //    compareHackFiles(file)
+    assembleAndCompare(file, Main.firstPass)
   }
 
-  private def assemble(
+  private def assembleAndCompare(
     file: String,
     firstPass: String => IO[Map[String, Long]] = str => IO(Map[String, Long]())
   ): Unit = {
-    val origin = s"$resources/testdata/$file.asm"
-    val destinationFileName = s"/generated/$file.hack"
-    val destination = s"$resources$destinationFileName"
+    val origin = s"$testData/$file.asm"
+    val destination = s"$generated/$file.hack"
+    val expectedFile = s"$testData/$file.hack"
 
     {
       for {
+        _ <- IO(Files.createDirectories(Paths.get(generated)))
         labels <- firstPass(origin)
         symbols <- Ref[IO].of(Symbols.predefined ++ labels)
         lastUsedAddress <- Ref[IO].of(15.toLong)
         _ <- Main.secondPass(origin, destination, symbols, lastUsedAddress)
-      } yield ()
+      } yield compareHackFiles(expectedFile, destination)
     }.unsafeRunSync()
-
   }
 
-  // can't run compareHackFiles() straight after assemble() because for some reason the file being written isn't being
-  // until the jvm stops, so compareHackFiles() throws exception as it can't find the file. Not sure why it's not closing.
-  // in the meantime, can run them separately one after the other
-  private def compareHackFiles(file: String): Assertion = {
-    val actualFileName = s"/generated/$file.hack"
-    val actualFile = Source.fromURL(getClass.getResource(actualFileName))
-    val actual = actualFile.getLines.mkString("\n")
-
-    val expectedFileName = s"/testdata/$file.hack"
-    val expectedFile = Source.fromURL(getClass.getResource(expectedFileName))
+  private def compareHackFiles(expectedFileName: String, actualFileName: String): Assertion = {
+    val expectedFile = Source.fromURI(Paths.get(expectedFileName).toUri)
     val expected = expectedFile.getLines.mkString("\n")
 
-    actualFile.close()
+    val actualFile = Source.fromURI(Paths.get(actualFileName).toUri)
+    val actual = actualFile.getLines.mkString("\n")
+
     expectedFile.close()
+    actualFile.close()
 
     actual shouldEqual expected
   }
