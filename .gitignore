@@ -6,3 +6,4 @@ target/
 .bloop/
 metals.sbt
 src/test/resources/testdata/generated
+example/*.hack

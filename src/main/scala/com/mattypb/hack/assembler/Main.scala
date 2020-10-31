@@ -29,6 +29,9 @@ object Main extends IOApp {
       IO.raiseError(new IllegalArgumentException("The only argument should be a .asm file"))
     else IO.unit
 
+  /*
+    firstPass creates map of labels -> instruction row
+   */
   def firstPass(originFileName: String): IO[Map[String, Long]] =
     Stream
       .resource(Blocker[IO])
@@ -47,6 +50,9 @@ object Main extends IOApp {
       .compile
       .to(Map)
 
+  /*
+    secondPass parses each instruction into hack binary and writes to file
+   */
   def secondPass(
     originFileName: String,
     destinationFileName: String,
